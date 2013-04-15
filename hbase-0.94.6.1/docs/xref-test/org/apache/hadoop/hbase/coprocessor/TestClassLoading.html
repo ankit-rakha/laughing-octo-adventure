@@ -1,0 +1,655 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+<title>TestClassLoading xref</title>
+<link type="text/css" rel="stylesheet" href="../../../../../stylesheet.css" />
+</head>
+<body>
+<pre>
+
+<a name="1" href="#1">1</a>   <em class="jxr_comment">/*</em>
+<a name="2" href="#2">2</a>   <em class="jxr_comment"> * Copyright 2011 The Apache Software Foundation</em>
+<a name="3" href="#3">3</a>   <em class="jxr_comment"> *</em>
+<a name="4" href="#4">4</a>   <em class="jxr_comment"> * Licensed to the Apache Software Foundation (ASF) under one</em>
+<a name="5" href="#5">5</a>   <em class="jxr_comment"> * or more contributor license agreements.  See the NOTICE file</em>
+<a name="6" href="#6">6</a>   <em class="jxr_comment"> * distributed with this work for additional information</em>
+<a name="7" href="#7">7</a>   <em class="jxr_comment"> * regarding copyright ownership.  The ASF licenses this file</em>
+<a name="8" href="#8">8</a>   <em class="jxr_comment"> * to you under the Apache License, Version 2.0 (the</em>
+<a name="9" href="#9">9</a>   <em class="jxr_comment"> * "License"); you may not use this file except in compliance</em>
+<a name="10" href="#10">10</a>  <em class="jxr_comment"> * with the License.  You may obtain a copy of the License at</em>
+<a name="11" href="#11">11</a>  <em class="jxr_comment"> *</em>
+<a name="12" href="#12">12</a>  <em class="jxr_comment"> *     <a href="http://www.apache.org/licenses/LICENSE-2.0" target="alexandria_uri">http://www.apache.org/licenses/LICENSE-2.0</a></em>
+<a name="13" href="#13">13</a>  <em class="jxr_comment"> *</em>
+<a name="14" href="#14">14</a>  <em class="jxr_comment"> * Unless required by applicable law or agreed to in writing, software</em>
+<a name="15" href="#15">15</a>  <em class="jxr_comment"> * distributed under the License is distributed on an "AS IS" BASIS,</em>
+<a name="16" href="#16">16</a>  <em class="jxr_comment"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</em>
+<a name="17" href="#17">17</a>  <em class="jxr_comment"> * See the License for the specific language governing permissions and</em>
+<a name="18" href="#18">18</a>  <em class="jxr_comment"> * limitations under the License.</em>
+<a name="19" href="#19">19</a>  <em class="jxr_comment"> */</em>
+<a name="20" href="#20">20</a>  <strong class="jxr_keyword">package</strong> org.apache.hadoop.hbase.coprocessor;
+<a name="21" href="#21">21</a>  
+<a name="22" href="#22">22</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.Log;
+<a name="23" href="#23">23</a>  <strong class="jxr_keyword">import</strong> org.apache.commons.logging.LogFactory;
+<a name="24" href="#24">24</a>  
+<a name="25" href="#25">25</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.conf.Configuration;
+<a name="26" href="#26">26</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.*;
+<a name="27" href="#27">27</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.client.HBaseAdmin;
+<a name="28" href="#28">28</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hbase.regionserver.HRegion;
+<a name="29" href="#29">29</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.hdfs.MiniDFSCluster;
+<a name="30" href="#30">30</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.fs.FileSystem;
+<a name="31" href="#31">31</a>  <strong class="jxr_keyword">import</strong> org.apache.hadoop.fs.Path;
+<a name="32" href="#32">32</a>  
+<a name="33" href="#33">33</a>  <strong class="jxr_keyword">import</strong> javax.tools.*;
+<a name="34" href="#34">34</a>  <strong class="jxr_keyword">import</strong> java.io.*;
+<a name="35" href="#35">35</a>  <strong class="jxr_keyword">import</strong> java.util.*;
+<a name="36" href="#36">36</a>  <strong class="jxr_keyword">import</strong> java.util.jar.*;
+<a name="37" href="#37">37</a>  
+<a name="38" href="#38">38</a>  <strong class="jxr_keyword">import</strong> org.junit.*;
+<a name="39" href="#39">39</a>  <strong class="jxr_keyword">import</strong> org.junit.experimental.categories.Category;
+<a name="40" href="#40">40</a>  
+<a name="41" href="#41">41</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.junit.Assert.assertEquals;
+<a name="42" href="#42">42</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.junit.Assert.assertTrue;
+<a name="43" href="#43">43</a>  <strong class="jxr_keyword">import</strong> <strong class="jxr_keyword">static</strong> org.junit.Assert.assertFalse;
+<a name="44" href="#44">44</a>  
+<a name="45" href="#45">45</a>  <em class="jxr_javadoccomment">/**</em>
+<a name="46" href="#46">46</a>  <em class="jxr_javadoccomment"> * Test coprocessors class loading.</em>
+<a name="47" href="#47">47</a>  <em class="jxr_javadoccomment"> */</em>
+<a name="48" href="#48">48</a>  @Category(MediumTests.<strong class="jxr_keyword">class</strong>)
+<a name="49" href="#49">49</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../org/apache/hadoop/hbase/coprocessor/TestClassLoading.html">TestClassLoading</a> {
+<a name="50" href="#50">50</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> Log LOG = LogFactory.getLog(TestClassLoading.<strong class="jxr_keyword">class</strong>);
+<a name="51" href="#51">51</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">static</strong> <a href="../../../../../org/apache/hadoop/hbase/HBaseTestingUtility.html">HBaseTestingUtility</a> TEST_UTIL = <strong class="jxr_keyword">new</strong> <a href="../../../../../org/apache/hadoop/hbase/HBaseTestingUtility.html">HBaseTestingUtility</a>();
+<a name="52" href="#52">52</a>  
+<a name="53" href="#53">53</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> MiniDFSCluster cluster;
+<a name="54" href="#54">54</a>  
+<a name="55" href="#55">55</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> BUFFER_SIZE = 4096;
+<a name="56" href="#56">56</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String tableName = <span class="jxr_string">"TestClassLoading"</span>;
+<a name="57" href="#57">57</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpName1 = <span class="jxr_string">"TestCP1"</span>;
+<a name="58" href="#58">58</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpName2 = <span class="jxr_string">"TestCP2"</span>;
+<a name="59" href="#59">59</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpName3 = <span class="jxr_string">"TestCP3"</span>;
+<a name="60" href="#60">60</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpName4 = <span class="jxr_string">"TestCP4"</span>;
+<a name="61" href="#61">61</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpName5 = <span class="jxr_string">"TestCP5"</span>;
+<a name="62" href="#62">62</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpName6 = <span class="jxr_string">"TestCP6"</span>;
+<a name="63" href="#63">63</a>    <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String cpNameInvalid = <span class="jxr_string">"TestCPInvalid"</span>;
+<a name="64" href="#64">64</a>  
+<a name="65" href="#65">65</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> Class&lt;?&gt; regionCoprocessor1 = ColumnAggregationEndpoint.<strong class="jxr_keyword">class</strong>;
+<a name="66" href="#66">66</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> Class&lt;?&gt; regionCoprocessor2 = GenericEndpoint.<strong class="jxr_keyword">class</strong>;
+<a name="67" href="#67">67</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> Class&lt;?&gt; regionServerCoprocessor = SampleRegionWALObserver.<strong class="jxr_keyword">class</strong>;
+<a name="68" href="#68">68</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> Class&lt;?&gt; masterCoprocessor = BaseMasterObserver.<strong class="jxr_keyword">class</strong>;
+<a name="69" href="#69">69</a>  
+<a name="70" href="#70">70</a>    <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> String[] regionServerSystemCoprocessors =
+<a name="71" href="#71">71</a>        <strong class="jxr_keyword">new</strong> String[]{
+<a name="72" href="#72">72</a>        regionServerCoprocessor.getSimpleName()
+<a name="73" href="#73">73</a>    };
+<a name="74" href="#74">74</a>  
+<a name="75" href="#75">75</a>    @BeforeClass
+<a name="76" href="#76">76</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> setUpBeforeClass() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="77" href="#77">77</a>      Configuration conf = TEST_UTIL.getConfiguration();
+<a name="78" href="#78">78</a>  
+<a name="79" href="#79">79</a>      <em class="jxr_comment">// regionCoprocessor1 will be loaded on all regionservers, since it is</em>
+<a name="80" href="#80">80</a>      <em class="jxr_comment">// loaded for any tables (user or meta).</em>
+<a name="81" href="#81">81</a>      conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+<a name="82" href="#82">82</a>          regionCoprocessor1.getName());
+<a name="83" href="#83">83</a>  
+<a name="84" href="#84">84</a>      <em class="jxr_comment">// regionCoprocessor2 will be loaded only on regionservers that serve a</em>
+<a name="85" href="#85">85</a>      <em class="jxr_comment">// user table region. Therefore, if there are no user tables loaded,</em>
+<a name="86" href="#86">86</a>      <em class="jxr_comment">// this coprocessor will not be loaded on any regionserver.</em>
+<a name="87" href="#87">87</a>      conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
+<a name="88" href="#88">88</a>          regionCoprocessor2.getName());
+<a name="89" href="#89">89</a>  
+<a name="90" href="#90">90</a>      conf.setStrings(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
+<a name="91" href="#91">91</a>          regionServerCoprocessor.getName());
+<a name="92" href="#92">92</a>      conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+<a name="93" href="#93">93</a>          masterCoprocessor.getName());
+<a name="94" href="#94">94</a>      TEST_UTIL.startMiniCluster(1);
+<a name="95" href="#95">95</a>      cluster = TEST_UTIL.getDFSCluster();
+<a name="96" href="#96">96</a>    }
+<a name="97" href="#97">97</a>  
+<a name="98" href="#98">98</a>    @AfterClass
+<a name="99" href="#99">99</a>    <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">void</strong> tearDownAfterClass() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="100" href="#100">100</a>     TEST_UTIL.shutdownMiniCluster();
+<a name="101" href="#101">101</a>   }
+<a name="102" href="#102">102</a> 
+<a name="103" href="#103">103</a>   <em class="jxr_comment">// generate jar file</em>
+<a name="104" href="#104">104</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">boolean</strong> createJarArchive(File archiveFile, File[] tobeJared) {
+<a name="105" href="#105">105</a>     <strong class="jxr_keyword">try</strong> {
+<a name="106" href="#106">106</a>       byte buffer[] = <strong class="jxr_keyword">new</strong> byte[BUFFER_SIZE];
+<a name="107" href="#107">107</a>       <em class="jxr_comment">// Open archive file</em>
+<a name="108" href="#108">108</a>       FileOutputStream stream = <strong class="jxr_keyword">new</strong> FileOutputStream(archiveFile);
+<a name="109" href="#109">109</a>       JarOutputStream out = <strong class="jxr_keyword">new</strong> JarOutputStream(stream, <strong class="jxr_keyword">new</strong> Manifest());
+<a name="110" href="#110">110</a> 
+<a name="111" href="#111">111</a>       <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; tobeJared.length; i++) {
+<a name="112" href="#112">112</a>         <strong class="jxr_keyword">if</strong> (tobeJared[i] == <strong class="jxr_keyword">null</strong> || !tobeJared[i].exists()
+<a name="113" href="#113">113</a>             || tobeJared[i].isDirectory()) {
+<a name="114" href="#114">114</a>           <strong class="jxr_keyword">continue</strong>;
+<a name="115" href="#115">115</a>         }
+<a name="116" href="#116">116</a> 
+<a name="117" href="#117">117</a>         <em class="jxr_comment">// Add archive entry</em>
+<a name="118" href="#118">118</a>         JarEntry jarAdd = <strong class="jxr_keyword">new</strong> JarEntry(tobeJared[i].getName());
+<a name="119" href="#119">119</a>         jarAdd.setTime(tobeJared[i].lastModified());
+<a name="120" href="#120">120</a>         out.putNextEntry(jarAdd);
+<a name="121" href="#121">121</a> 
+<a name="122" href="#122">122</a>         <em class="jxr_comment">// Write file to archive</em>
+<a name="123" href="#123">123</a>         FileInputStream in = <strong class="jxr_keyword">new</strong> FileInputStream(tobeJared[i]);
+<a name="124" href="#124">124</a>         <strong class="jxr_keyword">while</strong> (<strong class="jxr_keyword">true</strong>) {
+<a name="125" href="#125">125</a>           <strong class="jxr_keyword">int</strong> nRead = in.read(buffer, 0, buffer.length);
+<a name="126" href="#126">126</a>           <strong class="jxr_keyword">if</strong> (nRead &lt;= 0)
+<a name="127" href="#127">127</a>             <strong class="jxr_keyword">break</strong>;
+<a name="128" href="#128">128</a>           out.write(buffer, 0, nRead);
+<a name="129" href="#129">129</a>         }
+<a name="130" href="#130">130</a>         in.close();
+<a name="131" href="#131">131</a>       }
+<a name="132" href="#132">132</a>       out.close();
+<a name="133" href="#133">133</a>       stream.close();
+<a name="134" href="#134">134</a>       LOG.info(<span class="jxr_string">"Adding classes to jar file completed"</span>);
+<a name="135" href="#135">135</a>       <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">true</strong>;
+<a name="136" href="#136">136</a>     } <strong class="jxr_keyword">catch</strong> (Exception ex) {
+<a name="137" href="#137">137</a>       LOG.error(<span class="jxr_string">"Error: "</span> + ex.getMessage());
+<a name="138" href="#138">138</a>       <strong class="jxr_keyword">return</strong> false;
+<a name="139" href="#139">139</a>     }
+<a name="140" href="#140">140</a>   }
+<a name="141" href="#141">141</a> 
+<a name="142" href="#142">142</a>   <strong class="jxr_keyword">private</strong> File buildCoprocessorJar(String className) <strong class="jxr_keyword">throws</strong> Exception {
+<a name="143" href="#143">143</a>     <em class="jxr_comment">// compose a java source file.</em>
+<a name="144" href="#144">144</a>     String javaCode = <span class="jxr_string">"import org.apache.hadoop.hbase.coprocessor.*;"</span> +
+<a name="145" href="#145">145</a>       <span class="jxr_string">"public class "</span> + className + <span class="jxr_string">" extends BaseRegionObserver {}"</span>;
+<a name="146" href="#146">146</a>     Path baseDir = TEST_UTIL.getDataTestDir();
+<a name="147" href="#147">147</a>     Path srcDir = <strong class="jxr_keyword">new</strong> Path(TEST_UTIL.getDataTestDir(), <span class="jxr_string">"src"</span>);
+<a name="148" href="#148">148</a>     File srcDirPath = <strong class="jxr_keyword">new</strong> File(srcDir.toString());
+<a name="149" href="#149">149</a>     srcDirPath.mkdirs();
+<a name="150" href="#150">150</a>     File sourceCodeFile = <strong class="jxr_keyword">new</strong> File(srcDir.toString(), className + <span class="jxr_string">".java"</span>);
+<a name="151" href="#151">151</a>     BufferedWriter bw = <strong class="jxr_keyword">new</strong> BufferedWriter(<strong class="jxr_keyword">new</strong> FileWriter(sourceCodeFile));
+<a name="152" href="#152">152</a>     bw.write(javaCode);
+<a name="153" href="#153">153</a>     bw.close();
+<a name="154" href="#154">154</a> 
+<a name="155" href="#155">155</a>     <em class="jxr_comment">// compile it by JavaCompiler</em>
+<a name="156" href="#156">156</a>     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+<a name="157" href="#157">157</a>     ArrayList&lt;String&gt; srcFileNames = <strong class="jxr_keyword">new</strong> ArrayList&lt;String&gt;();
+<a name="158" href="#158">158</a>     srcFileNames.add(sourceCodeFile.toString());
+<a name="159" href="#159">159</a>     StandardJavaFileManager fm = compiler.getStandardFileManager(<strong class="jxr_keyword">null</strong>, <strong class="jxr_keyword">null</strong>,
+<a name="160" href="#160">160</a>       <strong class="jxr_keyword">null</strong>);
+<a name="161" href="#161">161</a>     Iterable&lt;? <strong class="jxr_keyword">extends</strong> JavaFileObject&gt; cu =
+<a name="162" href="#162">162</a>       fm.getJavaFileObjects(sourceCodeFile);
+<a name="163" href="#163">163</a>     List&lt;String&gt; options = <strong class="jxr_keyword">new</strong> ArrayList&lt;String&gt;();
+<a name="164" href="#164">164</a>     options.add(<span class="jxr_string">"-classpath"</span>);
+<a name="165" href="#165">165</a>     <em class="jxr_comment">// only add hbase classes to classpath. This is a little bit tricky: assume</em>
+<a name="166" href="#166">166</a>     <em class="jxr_comment">// the classpath is {hbaseSrc}/target/classes.</em>
+<a name="167" href="#167">167</a>     String currentDir = <strong class="jxr_keyword">new</strong> File(<span class="jxr_string">"."</span>).getAbsolutePath();
+<a name="168" href="#168">168</a>     String classpath =
+<a name="169" href="#169">169</a>         currentDir + File.separator + <span class="jxr_string">"target"</span>+ File.separator + <span class="jxr_string">"classes"</span> +
+<a name="170" href="#170">170</a>         System.getProperty(<span class="jxr_string">"path.separator"</span>) +
+<a name="171" href="#171">171</a>         System.getProperty(<span class="jxr_string">"surefire.test.class.path"</span>);
+<a name="172" href="#172">172</a>     options.add(classpath);
+<a name="173" href="#173">173</a>     LOG.debug(<span class="jxr_string">"Setting classpath to: "</span>+classpath);
+<a name="174" href="#174">174</a> 
+<a name="175" href="#175">175</a>     JavaCompiler.CompilationTask task = compiler.getTask(<strong class="jxr_keyword">null</strong>, fm, <strong class="jxr_keyword">null</strong>,
+<a name="176" href="#176">176</a>       options, <strong class="jxr_keyword">null</strong>, cu);
+<a name="177" href="#177">177</a>     assertTrue(<span class="jxr_string">"Compile file "</span> + sourceCodeFile + <span class="jxr_string">" failed."</span>, task.call());
+<a name="178" href="#178">178</a> 
+<a name="179" href="#179">179</a>     <em class="jxr_comment">// build a jar file by the classes files</em>
+<a name="180" href="#180">180</a>     String jarFileName = className + <span class="jxr_string">".jar"</span>;
+<a name="181" href="#181">181</a>     File jarFile = <strong class="jxr_keyword">new</strong> File(baseDir.toString(), jarFileName);
+<a name="182" href="#182">182</a>     <strong class="jxr_keyword">if</strong> (!createJarArchive(jarFile,
+<a name="183" href="#183">183</a>         <strong class="jxr_keyword">new</strong> File[]{<strong class="jxr_keyword">new</strong> File(srcDir.toString(), className + <span class="jxr_string">".class"</span>)})){
+<a name="184" href="#184">184</a>       assertTrue(<span class="jxr_string">"Build jar file failed."</span>, false);
+<a name="185" href="#185">185</a>     }
+<a name="186" href="#186">186</a> 
+<a name="187" href="#187">187</a>     <strong class="jxr_keyword">return</strong> jarFile;
+<a name="188" href="#188">188</a>   }
+<a name="189" href="#189">189</a> 
+<a name="190" href="#190">190</a>   @Test
+<a name="191" href="#191">191</a>   <em class="jxr_comment">// HBASE-3516: Test CP Class loading from HDFS</em>
+<a name="192" href="#192">192</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testClassLoadingFromHDFS() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="193" href="#193">193</a>     FileSystem fs = cluster.getFileSystem();
+<a name="194" href="#194">194</a> 
+<a name="195" href="#195">195</a>     File jarFile1 = buildCoprocessorJar(cpName1);
+<a name="196" href="#196">196</a>     File jarFile2 = buildCoprocessorJar(cpName2);
+<a name="197" href="#197">197</a> 
+<a name="198" href="#198">198</a>     <em class="jxr_comment">// copy the jars into dfs</em>
+<a name="199" href="#199">199</a>     fs.copyFromLocalFile(<strong class="jxr_keyword">new</strong> Path(jarFile1.getPath()),
+<a name="200" href="#200">200</a>       <strong class="jxr_keyword">new</strong> Path(fs.getUri().toString() + Path.SEPARATOR));
+<a name="201" href="#201">201</a>     String jarFileOnHDFS1 = fs.getUri().toString() + Path.SEPARATOR +
+<a name="202" href="#202">202</a>       jarFile1.getName();
+<a name="203" href="#203">203</a>     Path pathOnHDFS1 = <strong class="jxr_keyword">new</strong> Path(jarFileOnHDFS1);
+<a name="204" href="#204">204</a>     assertTrue(<span class="jxr_string">"Copy jar file to HDFS failed."</span>,
+<a name="205" href="#205">205</a>       fs.exists(pathOnHDFS1));
+<a name="206" href="#206">206</a>     LOG.info(<span class="jxr_string">"Copied jar file to HDFS: "</span> + jarFileOnHDFS1);
+<a name="207" href="#207">207</a> 
+<a name="208" href="#208">208</a>     fs.copyFromLocalFile(<strong class="jxr_keyword">new</strong> Path(jarFile2.getPath()),
+<a name="209" href="#209">209</a>         <strong class="jxr_keyword">new</strong> Path(fs.getUri().toString() + Path.SEPARATOR));
+<a name="210" href="#210">210</a>     String jarFileOnHDFS2 = fs.getUri().toString() + Path.SEPARATOR +
+<a name="211" href="#211">211</a>       jarFile2.getName();
+<a name="212" href="#212">212</a>     Path pathOnHDFS2 = <strong class="jxr_keyword">new</strong> Path(jarFileOnHDFS2);
+<a name="213" href="#213">213</a>     assertTrue(<span class="jxr_string">"Copy jar file to HDFS failed."</span>,
+<a name="214" href="#214">214</a>       fs.exists(pathOnHDFS2));
+<a name="215" href="#215">215</a>     LOG.info(<span class="jxr_string">"Copied jar file to HDFS: "</span> + jarFileOnHDFS2);
+<a name="216" href="#216">216</a> 
+<a name="217" href="#217">217</a>     <em class="jxr_comment">// create a table that references the coprocessors</em>
+<a name="218" href="#218">218</a>     HTableDescriptor htd = <strong class="jxr_keyword">new</strong> HTableDescriptor(tableName);
+<a name="219" href="#219">219</a>     htd.addFamily(<strong class="jxr_keyword">new</strong> HColumnDescriptor(<span class="jxr_string">"test"</span>));
+<a name="220" href="#220">220</a>       <em class="jxr_comment">// without configuration values</em>
+<a name="221" href="#221">221</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$1"</span>, jarFileOnHDFS1.toString() + <span class="jxr_string">"|"</span> + cpName1 +
+<a name="222" href="#222">222</a>       <span class="jxr_string">"|"</span> + Coprocessor.PRIORITY_USER);
+<a name="223" href="#223">223</a>       <em class="jxr_comment">// with configuration values</em>
+<a name="224" href="#224">224</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$2"</span>, jarFileOnHDFS2.toString() + <span class="jxr_string">"|"</span> + cpName2 +
+<a name="225" href="#225">225</a>       <span class="jxr_string">"|"</span> + Coprocessor.PRIORITY_USER + <span class="jxr_string">"|k1=v1,k2=v2,k3=v3"</span>);
+<a name="226" href="#226">226</a>     <em class="jxr_comment">// same jar but invalid class name (should fail to load this class)</em>
+<a name="227" href="#227">227</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$3"</span>, jarFileOnHDFS2.toString() + <span class="jxr_string">"|"</span> + cpNameInvalid +
+<a name="228" href="#228">228</a>       <span class="jxr_string">"|"</span> + Coprocessor.PRIORITY_USER);
+<a name="229" href="#229">229</a>     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+<a name="230" href="#230">230</a>     <strong class="jxr_keyword">if</strong> (admin.tableExists(tableName)) {
+<a name="231" href="#231">231</a>       admin.disableTable(tableName);
+<a name="232" href="#232">232</a>       admin.deleteTable(tableName);
+<a name="233" href="#233">233</a>     }
+<a name="234" href="#234">234</a>     CoprocessorHost.classLoadersCache.clear();
+<a name="235" href="#235">235</a>     byte[] startKey = {10, 63};
+<a name="236" href="#236">236</a>     byte[] endKey = {12, 43};
+<a name="237" href="#237">237</a>     admin.createTable(htd, startKey, endKey, 4);
+<a name="238" href="#238">238</a>     waitForTable(htd.getName());
+<a name="239" href="#239">239</a> 
+<a name="240" href="#240">240</a>     <em class="jxr_comment">// verify that the coprocessors were loaded</em>
+<a name="241" href="#241">241</a>     <strong class="jxr_keyword">boolean</strong> foundTableRegion=false;
+<a name="242" href="#242">242</a>     <strong class="jxr_keyword">boolean</strong> found_invalid = <strong class="jxr_keyword">true</strong>, found1 = <strong class="jxr_keyword">true</strong>, found2 = <strong class="jxr_keyword">true</strong>, found2_k1 = <strong class="jxr_keyword">true</strong>,
+<a name="243" href="#243">243</a>         found2_k2 = <strong class="jxr_keyword">true</strong>, found2_k3 = <strong class="jxr_keyword">true</strong>;
+<a name="244" href="#244">244</a>     Map&lt;HRegion, Set&lt;ClassLoader&gt;&gt; regionsActiveClassLoaders =
+<a name="245" href="#245">245</a>         <strong class="jxr_keyword">new</strong> HashMap&lt;HRegion, Set&lt;ClassLoader&gt;&gt;();
+<a name="246" href="#246">246</a>     <a href="../../../../../org/apache/hadoop/hbase/MiniHBaseCluster.html">MiniHBaseCluster</a> hbase = TEST_UTIL.getHBaseCluster();
+<a name="247" href="#247">247</a>     <strong class="jxr_keyword">for</strong> (HRegion region:
+<a name="248" href="#248">248</a>         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
+<a name="249" href="#249">249</a>       <strong class="jxr_keyword">if</strong> (region.getRegionNameAsString().startsWith(tableName)) {
+<a name="250" href="#250">250</a>         foundTableRegion = <strong class="jxr_keyword">true</strong>;
+<a name="251" href="#251">251</a>         CoprocessorEnvironment env;
+<a name="252" href="#252">252</a>         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName1);
+<a name="253" href="#253">253</a>         found1 = found1 &amp;&amp; (env != <strong class="jxr_keyword">null</strong>);
+<a name="254" href="#254">254</a>         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName2);
+<a name="255" href="#255">255</a>         found2 = found2 &amp;&amp; (env != <strong class="jxr_keyword">null</strong>);
+<a name="256" href="#256">256</a>         <strong class="jxr_keyword">if</strong> (env != <strong class="jxr_keyword">null</strong>) {
+<a name="257" href="#257">257</a>           Configuration conf = env.getConfiguration();
+<a name="258" href="#258">258</a>           found2_k1 = found2_k1 &amp;&amp; (conf.get(<span class="jxr_string">"k1"</span>) != <strong class="jxr_keyword">null</strong>);
+<a name="259" href="#259">259</a>           found2_k2 = found2_k2 &amp;&amp; (conf.get(<span class="jxr_string">"k2"</span>) != <strong class="jxr_keyword">null</strong>);
+<a name="260" href="#260">260</a>           found2_k3 = found2_k3 &amp;&amp; (conf.get(<span class="jxr_string">"k3"</span>) != <strong class="jxr_keyword">null</strong>);
+<a name="261" href="#261">261</a>         } <strong class="jxr_keyword">else</strong> {
+<a name="262" href="#262">262</a>           found2_k1 = found2_k2 = found2_k3 = false;
+<a name="263" href="#263">263</a>         }
+<a name="264" href="#264">264</a>         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpNameInvalid);
+<a name="265" href="#265">265</a>         found_invalid = found_invalid &amp;&amp; (env != <strong class="jxr_keyword">null</strong>);
+<a name="266" href="#266">266</a> 
+<a name="267" href="#267">267</a>         regionsActiveClassLoaders
+<a name="268" href="#268">268</a>             .put(region, ((CoprocessorHost) region.getCoprocessorHost()).getExternalClassLoaders());
+<a name="269" href="#269">269</a>       }
+<a name="270" href="#270">270</a>     }
+<a name="271" href="#271">271</a> 
+<a name="272" href="#272">272</a>     assertTrue(<span class="jxr_string">"No region was found for table "</span> + tableName, foundTableRegion);
+<a name="273" href="#273">273</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName1 + <span class="jxr_string">" was missing on a region"</span>, found1);
+<a name="274" href="#274">274</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName2 + <span class="jxr_string">" was missing on a region"</span>, found2);
+<a name="275" href="#275">275</a>     <em class="jxr_comment">//an invalid CP class name is defined for this table, validate that it is not loaded</em>
+<a name="276" href="#276">276</a>     assertFalse(<span class="jxr_string">"Class "</span> + cpNameInvalid + <span class="jxr_string">" was found on a region"</span>, found_invalid);
+<a name="277" href="#277">277</a>     assertTrue(<span class="jxr_string">"Configuration key 'k1' was missing on a region"</span>, found2_k1);
+<a name="278" href="#278">278</a>     assertTrue(<span class="jxr_string">"Configuration key 'k2' was missing on a region"</span>, found2_k2);
+<a name="279" href="#279">279</a>     assertTrue(<span class="jxr_string">"Configuration key 'k3' was missing on a region"</span>, found2_k3);
+<a name="280" href="#280">280</a>     <em class="jxr_comment">// check if CP classloaders are cached</em>
+<a name="281" href="#281">281</a>     assertTrue(jarFileOnHDFS1 + <span class="jxr_string">" was not cached"</span>,
+<a name="282" href="#282">282</a>       CoprocessorHost.classLoadersCache.containsKey(pathOnHDFS1));
+<a name="283" href="#283">283</a>     assertTrue(jarFileOnHDFS2 + <span class="jxr_string">" was not cached"</span>,
+<a name="284" href="#284">284</a>       CoprocessorHost.classLoadersCache.containsKey(pathOnHDFS2));
+<a name="285" href="#285">285</a>     <em class="jxr_comment">//two external jar used, should be one classloader per jar</em>
+<a name="286" href="#286">286</a>     assertEquals(<span class="jxr_string">"The number of cached classloaders should be equal to the number"</span> +
+<a name="287" href="#287">287</a>       <span class="jxr_string">" of external jar files"</span>,
+<a name="288" href="#288">288</a>       2, CoprocessorHost.classLoadersCache.size());
+<a name="289" href="#289">289</a>     <em class="jxr_comment">//check if region active classloaders are shared across all RS regions</em>
+<a name="290" href="#290">290</a>     Set&lt;ClassLoader&gt; externalClassLoaders = <strong class="jxr_keyword">new</strong> HashSet&lt;ClassLoader&gt;(
+<a name="291" href="#291">291</a>         CoprocessorHost.classLoadersCache.values());
+<a name="292" href="#292">292</a>     <strong class="jxr_keyword">for</strong> (Map.Entry&lt;HRegion, Set&lt;ClassLoader&gt;&gt; regionCP : regionsActiveClassLoaders.entrySet()) {
+<a name="293" href="#293">293</a>       assertTrue(<span class="jxr_string">"Some CP classloaders for region "</span> + regionCP.getKey() + <span class="jxr_string">" are not cached."</span>
+<a name="294" href="#294">294</a>             + <span class="jxr_string">" ClassLoader Cache:"</span> + externalClassLoaders
+<a name="295" href="#295">295</a>             + <span class="jxr_string">" Region ClassLoaders:"</span> + regionCP.getValue(),
+<a name="296" href="#296">296</a>             externalClassLoaders.containsAll(regionCP.getValue()));
+<a name="297" href="#297">297</a>     }
+<a name="298" href="#298">298</a>   }
+<a name="299" href="#299">299</a> 
+<a name="300" href="#300">300</a>   <strong class="jxr_keyword">private</strong> String getLocalPath(File file) {
+<a name="301" href="#301">301</a>     <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">new</strong> Path(file.toURI()).toString();
+<a name="302" href="#302">302</a>   }
+<a name="303" href="#303">303</a> 
+<a name="304" href="#304">304</a>   @Test
+<a name="305" href="#305">305</a>   <em class="jxr_comment">// HBASE-3516: Test CP Class loading from local file system</em>
+<a name="306" href="#306">306</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testClassLoadingFromLocalFS() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="307" href="#307">307</a>     File jarFile = buildCoprocessorJar(cpName3);
+<a name="308" href="#308">308</a> 
+<a name="309" href="#309">309</a>     <em class="jxr_comment">// create a table that references the jar</em>
+<a name="310" href="#310">310</a>     HTableDescriptor htd = <strong class="jxr_keyword">new</strong> HTableDescriptor(cpName3);
+<a name="311" href="#311">311</a>     htd.addFamily(<strong class="jxr_keyword">new</strong> HColumnDescriptor(<span class="jxr_string">"test"</span>));
+<a name="312" href="#312">312</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$1"</span>, getLocalPath(jarFile) + <span class="jxr_string">"|"</span> + cpName3 + <span class="jxr_string">"|"</span> +
+<a name="313" href="#313">313</a>       Coprocessor.PRIORITY_USER);
+<a name="314" href="#314">314</a>     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+<a name="315" href="#315">315</a>     admin.createTable(htd);
+<a name="316" href="#316">316</a>     waitForTable(htd.getName());
+<a name="317" href="#317">317</a> 
+<a name="318" href="#318">318</a>     <em class="jxr_comment">// verify that the coprocessor was loaded</em>
+<a name="319" href="#319">319</a>     <strong class="jxr_keyword">boolean</strong> found = false;
+<a name="320" href="#320">320</a>     <a href="../../../../../org/apache/hadoop/hbase/MiniHBaseCluster.html">MiniHBaseCluster</a> hbase = TEST_UTIL.getHBaseCluster();
+<a name="321" href="#321">321</a>     <strong class="jxr_keyword">for</strong> (HRegion region:
+<a name="322" href="#322">322</a>         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
+<a name="323" href="#323">323</a>       <strong class="jxr_keyword">if</strong> (region.getRegionNameAsString().startsWith(cpName3)) {
+<a name="324" href="#324">324</a>         found = (region.getCoprocessorHost().findCoprocessor(cpName3) != <strong class="jxr_keyword">null</strong>);
+<a name="325" href="#325">325</a>       }
+<a name="326" href="#326">326</a>     }
+<a name="327" href="#327">327</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName3 + <span class="jxr_string">" was missing on a region"</span>, found);
+<a name="328" href="#328">328</a>   }
+<a name="329" href="#329">329</a> 
+<a name="330" href="#330">330</a>   @Test
+<a name="331" href="#331">331</a>   <em class="jxr_comment">// HBASE-6308: Test CP classloader is the CoprocessorClassLoader</em>
+<a name="332" href="#332">332</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testPrivateClassLoader() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="333" href="#333">333</a>     File jarFile = buildCoprocessorJar(cpName4);
+<a name="334" href="#334">334</a> 
+<a name="335" href="#335">335</a>     <em class="jxr_comment">// create a table that references the jar</em>
+<a name="336" href="#336">336</a>     HTableDescriptor htd = <strong class="jxr_keyword">new</strong> HTableDescriptor(cpName4);
+<a name="337" href="#337">337</a>     htd.addFamily(<strong class="jxr_keyword">new</strong> HColumnDescriptor(<span class="jxr_string">"test"</span>));
+<a name="338" href="#338">338</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$1"</span>, getLocalPath(jarFile) + <span class="jxr_string">"|"</span> + cpName4 + <span class="jxr_string">"|"</span> +
+<a name="339" href="#339">339</a>       Coprocessor.PRIORITY_USER);
+<a name="340" href="#340">340</a>     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+<a name="341" href="#341">341</a>     admin.createTable(htd);
+<a name="342" href="#342">342</a>     waitForTable(htd.getName());
+<a name="343" href="#343">343</a> 
+<a name="344" href="#344">344</a>     <em class="jxr_comment">// verify that the coprocessor was loaded correctly</em>
+<a name="345" href="#345">345</a>     <strong class="jxr_keyword">boolean</strong> found = false;
+<a name="346" href="#346">346</a>     <a href="../../../../../org/apache/hadoop/hbase/MiniHBaseCluster.html">MiniHBaseCluster</a> hbase = TEST_UTIL.getHBaseCluster();
+<a name="347" href="#347">347</a>     <strong class="jxr_keyword">for</strong> (HRegion region:
+<a name="348" href="#348">348</a>         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
+<a name="349" href="#349">349</a>       <strong class="jxr_keyword">if</strong> (region.getRegionNameAsString().startsWith(cpName4)) {
+<a name="350" href="#350">350</a>         Coprocessor cp = region.getCoprocessorHost().findCoprocessor(cpName4);
+<a name="351" href="#351">351</a>         <strong class="jxr_keyword">if</strong> (cp != <strong class="jxr_keyword">null</strong>) {
+<a name="352" href="#352">352</a>           found = <strong class="jxr_keyword">true</strong>;
+<a name="353" href="#353">353</a>           assertEquals(<span class="jxr_string">"Class "</span> + cpName4 + <span class="jxr_string">" was not loaded by CoprocessorClassLoader"</span>,
+<a name="354" href="#354">354</a>             cp.getClass().getClassLoader().getClass(), CoprocessorClassLoader.<strong class="jxr_keyword">class</strong>);
+<a name="355" href="#355">355</a>         }
+<a name="356" href="#356">356</a>       }
+<a name="357" href="#357">357</a>     }
+<a name="358" href="#358">358</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName4 + <span class="jxr_string">" was missing on a region"</span>, found);
+<a name="359" href="#359">359</a>   }
+<a name="360" href="#360">360</a> 
+<a name="361" href="#361">361</a>   @Test
+<a name="362" href="#362">362</a>   <em class="jxr_comment">// HBase-3810: Registering a Coprocessor at HTableDescriptor should be</em>
+<a name="363" href="#363">363</a>   <em class="jxr_comment">// less strict</em>
+<a name="364" href="#364">364</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testHBase3810() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="365" href="#365">365</a>     <em class="jxr_comment">// allowed value pattern: [path] | class name | [priority] | [key values]</em>
+<a name="366" href="#366">366</a> 
+<a name="367" href="#367">367</a>     File jarFile1 = buildCoprocessorJar(cpName1);
+<a name="368" href="#368">368</a>     File jarFile2 = buildCoprocessorJar(cpName2);
+<a name="369" href="#369">369</a>     File jarFile5 = buildCoprocessorJar(cpName5);
+<a name="370" href="#370">370</a>     File jarFile6 = buildCoprocessorJar(cpName6);
+<a name="371" href="#371">371</a> 
+<a name="372" href="#372">372</a>     String cpKey1 = <span class="jxr_string">"COPROCESSOR$1"</span>;
+<a name="373" href="#373">373</a>     String cpKey2 = <span class="jxr_string">" Coprocessor$2 "</span>;
+<a name="374" href="#374">374</a>     String cpKey3 = <span class="jxr_string">" coprocessor$03 "</span>;
+<a name="375" href="#375">375</a> 
+<a name="376" href="#376">376</a>     String cpValue1 = getLocalPath(jarFile1) + <span class="jxr_string">"|"</span> + cpName1 + <span class="jxr_string">"|"</span> +
+<a name="377" href="#377">377</a>         Coprocessor.PRIORITY_USER;
+<a name="378" href="#378">378</a>     String cpValue2 = getLocalPath(jarFile2) + <span class="jxr_string">" | "</span> + cpName2 + <span class="jxr_string">" | "</span>;
+<a name="379" href="#379">379</a>     <em class="jxr_comment">// load from default class loader</em>
+<a name="380" href="#380">380</a>     String cpValue3 =
+<a name="381" href="#381">381</a>         <span class="jxr_string">" | org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver | | k=v "</span>;
+<a name="382" href="#382">382</a> 
+<a name="383" href="#383">383</a>     <em class="jxr_comment">// create a table that references the jar</em>
+<a name="384" href="#384">384</a>     HTableDescriptor htd = <strong class="jxr_keyword">new</strong> HTableDescriptor(tableName);
+<a name="385" href="#385">385</a>     htd.addFamily(<strong class="jxr_keyword">new</strong> HColumnDescriptor(<span class="jxr_string">"test"</span>));
+<a name="386" href="#386">386</a> 
+<a name="387" href="#387">387</a>     <em class="jxr_comment">// add 3 coprocessors by setting htd attributes directly.</em>
+<a name="388" href="#388">388</a>     htd.setValue(cpKey1, cpValue1);
+<a name="389" href="#389">389</a>     htd.setValue(cpKey2, cpValue2);
+<a name="390" href="#390">390</a>     htd.setValue(cpKey3, cpValue3);
+<a name="391" href="#391">391</a> 
+<a name="392" href="#392">392</a>     <em class="jxr_comment">// add 2 coprocessor by using new htd.addCoprocessor() api</em>
+<a name="393" href="#393">393</a>     htd.addCoprocessor(cpName5, <strong class="jxr_keyword">new</strong> Path(getLocalPath(jarFile5)),
+<a name="394" href="#394">394</a>         Coprocessor.PRIORITY_USER, <strong class="jxr_keyword">null</strong>);
+<a name="395" href="#395">395</a>     Map&lt;String, String&gt; kvs = <strong class="jxr_keyword">new</strong> HashMap&lt;String, String&gt;();
+<a name="396" href="#396">396</a>     kvs.put(<span class="jxr_string">"k1"</span>, <span class="jxr_string">"v1"</span>);
+<a name="397" href="#397">397</a>     kvs.put(<span class="jxr_string">"k2"</span>, <span class="jxr_string">"v2"</span>);
+<a name="398" href="#398">398</a>     kvs.put(<span class="jxr_string">"k3"</span>, <span class="jxr_string">"v3"</span>);
+<a name="399" href="#399">399</a>     htd.addCoprocessor(cpName6, <strong class="jxr_keyword">new</strong> Path(getLocalPath(jarFile6)),
+<a name="400" href="#400">400</a>         Coprocessor.PRIORITY_USER, kvs);
+<a name="401" href="#401">401</a> 
+<a name="402" href="#402">402</a>     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+<a name="403" href="#403">403</a>     <strong class="jxr_keyword">if</strong> (admin.tableExists(tableName)) {
+<a name="404" href="#404">404</a>       admin.disableTable(tableName);
+<a name="405" href="#405">405</a>       admin.deleteTable(tableName);
+<a name="406" href="#406">406</a>     }
+<a name="407" href="#407">407</a>     admin.createTable(htd);
+<a name="408" href="#408">408</a>     waitForTable(htd.getName());
+<a name="409" href="#409">409</a> 
+<a name="410" href="#410">410</a>     <em class="jxr_comment">// verify that the coprocessor was loaded</em>
+<a name="411" href="#411">411</a>     <strong class="jxr_keyword">boolean</strong> found_2 = false, found_1 = false, found_3 = false,
+<a name="412" href="#412">412</a>         found_5 = false, found_6 = false;
+<a name="413" href="#413">413</a>     <strong class="jxr_keyword">boolean</strong> found6_k1 = false, found6_k2 = false, found6_k3 = false,
+<a name="414" href="#414">414</a>         found6_k4 = false;
+<a name="415" href="#415">415</a> 
+<a name="416" href="#416">416</a>     <a href="../../../../../org/apache/hadoop/hbase/MiniHBaseCluster.html">MiniHBaseCluster</a> hbase = TEST_UTIL.getHBaseCluster();
+<a name="417" href="#417">417</a>     <strong class="jxr_keyword">for</strong> (HRegion region:
+<a name="418" href="#418">418</a>         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
+<a name="419" href="#419">419</a>       <strong class="jxr_keyword">if</strong> (region.getRegionNameAsString().startsWith(tableName)) {
+<a name="420" href="#420">420</a>         found_1 = found_1 ||
+<a name="421" href="#421">421</a>             (region.getCoprocessorHost().findCoprocessor(cpName1) != <strong class="jxr_keyword">null</strong>);
+<a name="422" href="#422">422</a>         found_2 = found_2 ||
+<a name="423" href="#423">423</a>             (region.getCoprocessorHost().findCoprocessor(cpName2) != <strong class="jxr_keyword">null</strong>);
+<a name="424" href="#424">424</a>         found_3 = found_3 ||
+<a name="425" href="#425">425</a>             (region.getCoprocessorHost().findCoprocessor(<span class="jxr_string">"SimpleRegionObserver"</span>)
+<a name="426" href="#426">426</a>                 != <strong class="jxr_keyword">null</strong>);
+<a name="427" href="#427">427</a>         found_5 = found_5 ||
+<a name="428" href="#428">428</a>             (region.getCoprocessorHost().findCoprocessor(cpName5) != <strong class="jxr_keyword">null</strong>);
+<a name="429" href="#429">429</a> 
+<a name="430" href="#430">430</a>         CoprocessorEnvironment env =
+<a name="431" href="#431">431</a>             region.getCoprocessorHost().findCoprocessorEnvironment(cpName6);
+<a name="432" href="#432">432</a>         <strong class="jxr_keyword">if</strong> (env != <strong class="jxr_keyword">null</strong>) {
+<a name="433" href="#433">433</a>           found_6 = <strong class="jxr_keyword">true</strong>;
+<a name="434" href="#434">434</a>           Configuration conf = env.getConfiguration();
+<a name="435" href="#435">435</a>           found6_k1 = conf.get(<span class="jxr_string">"k1"</span>) != <strong class="jxr_keyword">null</strong>;
+<a name="436" href="#436">436</a>           found6_k2 = conf.get(<span class="jxr_string">"k2"</span>) != <strong class="jxr_keyword">null</strong>;
+<a name="437" href="#437">437</a>           found6_k3 = conf.get(<span class="jxr_string">"k3"</span>) != <strong class="jxr_keyword">null</strong>;
+<a name="438" href="#438">438</a>         }
+<a name="439" href="#439">439</a>       }
+<a name="440" href="#440">440</a>     }
+<a name="441" href="#441">441</a> 
+<a name="442" href="#442">442</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName1 + <span class="jxr_string">" was missing on a region"</span>, found_1);
+<a name="443" href="#443">443</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName2 + <span class="jxr_string">" was missing on a region"</span>, found_2);
+<a name="444" href="#444">444</a>     assertTrue(<span class="jxr_string">"Class SimpleRegionObserver was missing on a region"</span>, found_3);
+<a name="445" href="#445">445</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName5 + <span class="jxr_string">" was missing on a region"</span>, found_5);
+<a name="446" href="#446">446</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName6 + <span class="jxr_string">" was missing on a region"</span>, found_6);
+<a name="447" href="#447">447</a> 
+<a name="448" href="#448">448</a>     assertTrue(<span class="jxr_string">"Configuration key 'k1' was missing on a region"</span>, found6_k1);
+<a name="449" href="#449">449</a>     assertTrue(<span class="jxr_string">"Configuration key 'k2' was missing on a region"</span>, found6_k2);
+<a name="450" href="#450">450</a>     assertTrue(<span class="jxr_string">"Configuration key 'k3' was missing on a region"</span>, found6_k3);
+<a name="451" href="#451">451</a>     assertFalse(<span class="jxr_string">"Configuration key 'k4' wasn't configured"</span>, found6_k4);
+<a name="452" href="#452">452</a>   }
+<a name="453" href="#453">453</a> 
+<a name="454" href="#454">454</a>   @Test
+<a name="455" href="#455">455</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testClassLoadingFromLibDirInJar() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="456" href="#456">456</a>     FileSystem fs = cluster.getFileSystem();
+<a name="457" href="#457">457</a> 
+<a name="458" href="#458">458</a>     File innerJarFile1 = buildCoprocessorJar(cpName1);
+<a name="459" href="#459">459</a>     File innerJarFile2 = buildCoprocessorJar(cpName2);
+<a name="460" href="#460">460</a>     File outerJarFile = <strong class="jxr_keyword">new</strong> File(TEST_UTIL.getDataTestDir().toString(), <span class="jxr_string">"outer.jar"</span>);
+<a name="461" href="#461">461</a> 
+<a name="462" href="#462">462</a>     byte buffer[] = <strong class="jxr_keyword">new</strong> byte[BUFFER_SIZE];
+<a name="463" href="#463">463</a>     <em class="jxr_comment">// TODO: code here and elsewhere in this file is duplicated w/TestClassFinder.</em>
+<a name="464" href="#464">464</a>     <em class="jxr_comment">//       Some refactoring may be in order...</em>
+<a name="465" href="#465">465</a>     <em class="jxr_comment">// Open archive file</em>
+<a name="466" href="#466">466</a>     FileOutputStream stream = <strong class="jxr_keyword">new</strong> FileOutputStream(outerJarFile);
+<a name="467" href="#467">467</a>     JarOutputStream out = <strong class="jxr_keyword">new</strong> JarOutputStream(stream, <strong class="jxr_keyword">new</strong> Manifest());
+<a name="468" href="#468">468</a> 
+<a name="469" href="#469">469</a>     <strong class="jxr_keyword">for</strong> (File jarFile: <strong class="jxr_keyword">new</strong> File[] { innerJarFile1, innerJarFile2 }) {
+<a name="470" href="#470">470</a>       <em class="jxr_comment">// Add archive entry</em>
+<a name="471" href="#471">471</a>       JarEntry jarAdd = <strong class="jxr_keyword">new</strong> JarEntry(<span class="jxr_string">"/lib/"</span> + jarFile.getName());
+<a name="472" href="#472">472</a>       jarAdd.setTime(jarFile.lastModified());
+<a name="473" href="#473">473</a>       out.putNextEntry(jarAdd);
+<a name="474" href="#474">474</a> 
+<a name="475" href="#475">475</a>       <em class="jxr_comment">// Write file to archive</em>
+<a name="476" href="#476">476</a>       FileInputStream in = <strong class="jxr_keyword">new</strong> FileInputStream(jarFile);
+<a name="477" href="#477">477</a>       <strong class="jxr_keyword">while</strong> (<strong class="jxr_keyword">true</strong>) {
+<a name="478" href="#478">478</a>         <strong class="jxr_keyword">int</strong> nRead = in.read(buffer, 0, buffer.length);
+<a name="479" href="#479">479</a>         <strong class="jxr_keyword">if</strong> (nRead &lt;= 0)
+<a name="480" href="#480">480</a>           <strong class="jxr_keyword">break</strong>;
+<a name="481" href="#481">481</a>         out.write(buffer, 0, nRead);
+<a name="482" href="#482">482</a>       }
+<a name="483" href="#483">483</a>       in.close();
+<a name="484" href="#484">484</a>     }
+<a name="485" href="#485">485</a>     out.close();
+<a name="486" href="#486">486</a>     stream.close();
+<a name="487" href="#487">487</a>     LOG.info(<span class="jxr_string">"Adding jar file to outer jar file completed"</span>);
+<a name="488" href="#488">488</a> 
+<a name="489" href="#489">489</a>     <em class="jxr_comment">// copy the jars into dfs</em>
+<a name="490" href="#490">490</a>     fs.copyFromLocalFile(<strong class="jxr_keyword">new</strong> Path(outerJarFile.getPath()),
+<a name="491" href="#491">491</a>       <strong class="jxr_keyword">new</strong> Path(fs.getUri().toString() + Path.SEPARATOR));
+<a name="492" href="#492">492</a>     String jarFileOnHDFS = fs.getUri().toString() + Path.SEPARATOR +
+<a name="493" href="#493">493</a>       outerJarFile.getName();
+<a name="494" href="#494">494</a>     assertTrue(<span class="jxr_string">"Copy jar file to HDFS failed."</span>,
+<a name="495" href="#495">495</a>       fs.exists(<strong class="jxr_keyword">new</strong> Path(jarFileOnHDFS)));
+<a name="496" href="#496">496</a>     LOG.info(<span class="jxr_string">"Copied jar file to HDFS: "</span> + jarFileOnHDFS);
+<a name="497" href="#497">497</a> 
+<a name="498" href="#498">498</a>     <em class="jxr_comment">// create a table that references the coprocessors</em>
+<a name="499" href="#499">499</a>     HTableDescriptor htd = <strong class="jxr_keyword">new</strong> HTableDescriptor(tableName);
+<a name="500" href="#500">500</a>     htd.addFamily(<strong class="jxr_keyword">new</strong> HColumnDescriptor(<span class="jxr_string">"test"</span>));
+<a name="501" href="#501">501</a>       <em class="jxr_comment">// without configuration values</em>
+<a name="502" href="#502">502</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$1"</span>, jarFileOnHDFS.toString() + <span class="jxr_string">"|"</span> + cpName1 +
+<a name="503" href="#503">503</a>       <span class="jxr_string">"|"</span> + Coprocessor.PRIORITY_USER);
+<a name="504" href="#504">504</a>       <em class="jxr_comment">// with configuration values</em>
+<a name="505" href="#505">505</a>     htd.setValue(<span class="jxr_string">"COPROCESSOR$2"</span>, jarFileOnHDFS.toString() + <span class="jxr_string">"|"</span> + cpName2 +
+<a name="506" href="#506">506</a>       <span class="jxr_string">"|"</span> + Coprocessor.PRIORITY_USER + <span class="jxr_string">"|k1=v1,k2=v2,k3=v3"</span>);
+<a name="507" href="#507">507</a>     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+<a name="508" href="#508">508</a>     <strong class="jxr_keyword">if</strong> (admin.tableExists(tableName)) {
+<a name="509" href="#509">509</a>       admin.disableTable(tableName);
+<a name="510" href="#510">510</a>       admin.deleteTable(tableName);
+<a name="511" href="#511">511</a>     }
+<a name="512" href="#512">512</a>     admin.createTable(htd);
+<a name="513" href="#513">513</a>     waitForTable(htd.getName());
+<a name="514" href="#514">514</a> 
+<a name="515" href="#515">515</a>     <em class="jxr_comment">// verify that the coprocessors were loaded</em>
+<a name="516" href="#516">516</a>     <strong class="jxr_keyword">boolean</strong> found1 = false, found2 = false, found2_k1 = false,
+<a name="517" href="#517">517</a>         found2_k2 = false, found2_k3 = false;
+<a name="518" href="#518">518</a>     <a href="../../../../../org/apache/hadoop/hbase/MiniHBaseCluster.html">MiniHBaseCluster</a> hbase = TEST_UTIL.getHBaseCluster();
+<a name="519" href="#519">519</a>     <strong class="jxr_keyword">for</strong> (HRegion region:
+<a name="520" href="#520">520</a>         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
+<a name="521" href="#521">521</a>       <strong class="jxr_keyword">if</strong> (region.getRegionNameAsString().startsWith(tableName)) {
+<a name="522" href="#522">522</a>         CoprocessorEnvironment env;
+<a name="523" href="#523">523</a>         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName1);
+<a name="524" href="#524">524</a>         <strong class="jxr_keyword">if</strong> (env != <strong class="jxr_keyword">null</strong>) {
+<a name="525" href="#525">525</a>           found1 = <strong class="jxr_keyword">true</strong>;
+<a name="526" href="#526">526</a>         }
+<a name="527" href="#527">527</a>         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName2);
+<a name="528" href="#528">528</a>         <strong class="jxr_keyword">if</strong> (env != <strong class="jxr_keyword">null</strong>) {
+<a name="529" href="#529">529</a>           found2 = <strong class="jxr_keyword">true</strong>;
+<a name="530" href="#530">530</a>           Configuration conf = env.getConfiguration();
+<a name="531" href="#531">531</a>           found2_k1 = conf.get(<span class="jxr_string">"k1"</span>) != <strong class="jxr_keyword">null</strong>;
+<a name="532" href="#532">532</a>           found2_k2 = conf.get(<span class="jxr_string">"k2"</span>) != <strong class="jxr_keyword">null</strong>;
+<a name="533" href="#533">533</a>           found2_k3 = conf.get(<span class="jxr_string">"k3"</span>) != <strong class="jxr_keyword">null</strong>;
+<a name="534" href="#534">534</a>         }
+<a name="535" href="#535">535</a>       }
+<a name="536" href="#536">536</a>     }
+<a name="537" href="#537">537</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName1 + <span class="jxr_string">" was missing on a region"</span>, found1);
+<a name="538" href="#538">538</a>     assertTrue(<span class="jxr_string">"Class "</span> + cpName2 + <span class="jxr_string">" was missing on a region"</span>, found2);
+<a name="539" href="#539">539</a>     assertTrue(<span class="jxr_string">"Configuration key 'k1' was missing on a region"</span>, found2_k1);
+<a name="540" href="#540">540</a>     assertTrue(<span class="jxr_string">"Configuration key 'k2' was missing on a region"</span>, found2_k2);
+<a name="541" href="#541">541</a>     assertTrue(<span class="jxr_string">"Configuration key 'k3' was missing on a region"</span>, found2_k3);
+<a name="542" href="#542">542</a>   }
+<a name="543" href="#543">543</a> 
+<a name="544" href="#544">544</a>   @Test
+<a name="545" href="#545">545</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testRegionServerCoprocessorsReported() <strong class="jxr_keyword">throws</strong> Exception {
+<a name="546" href="#546">546</a>     <em class="jxr_comment">// This was a test for HBASE-4070.</em>
+<a name="547" href="#547">547</a>     <em class="jxr_comment">// We are removing coprocessors from region load in HBASE-5258.</em>
+<a name="548" href="#548">548</a>     <em class="jxr_comment">// Therefore, this test now only checks system coprocessors.</em>
+<a name="549" href="#549">549</a> 
+<a name="550" href="#550">550</a>     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+<a name="551" href="#551">551</a>     assertAllRegionServers(regionServerSystemCoprocessors,<strong class="jxr_keyword">null</strong>);
+<a name="552" href="#552">552</a>   }
+<a name="553" href="#553">553</a> 
+<a name="554" href="#554">554</a>   <em class="jxr_javadoccomment">/**</em>
+<a name="555" href="#555">555</a> <em class="jxr_javadoccomment">   * return the subset of all regionservers</em>
+<a name="556" href="#556">556</a> <em class="jxr_javadoccomment">   * (actually returns set of HServerLoads)</em>
+<a name="557" href="#557">557</a> <em class="jxr_javadoccomment">   * which host some region in a given table.</em>
+<a name="558" href="#558">558</a> <em class="jxr_javadoccomment">   * used by assertAllRegionServers() below to</em>
+<a name="559" href="#559">559</a> <em class="jxr_javadoccomment">   * test reporting of loaded coprocessors.</em>
+<a name="560" href="#560">560</a> <em class="jxr_javadoccomment">   * @param tableName : given table.</em>
+<a name="561" href="#561">561</a> <em class="jxr_javadoccomment">   * @return subset of all servers.</em>
+<a name="562" href="#562">562</a> <em class="jxr_javadoccomment">   */</em>
+<a name="563" href="#563">563</a>   Map&lt;ServerName, HServerLoad&gt; serversForTable(String tableName) {
+<a name="564" href="#564">564</a>     Map&lt;ServerName, HServerLoad&gt; serverLoadHashMap =
+<a name="565" href="#565">565</a>         <strong class="jxr_keyword">new</strong> HashMap&lt;ServerName, HServerLoad&gt;();
+<a name="566" href="#566">566</a>     <strong class="jxr_keyword">for</strong>(Map.Entry&lt;ServerName,HServerLoad&gt; server:
+<a name="567" href="#567">567</a>         TEST_UTIL.getMiniHBaseCluster().getMaster().getServerManager().
+<a name="568" href="#568">568</a>             getOnlineServers().entrySet()) {
+<a name="569" href="#569">569</a>       <strong class="jxr_keyword">for</strong>(Map.Entry&lt;byte[], HServerLoad.RegionLoad&gt; region:
+<a name="570" href="#570">570</a>           server.getValue().getRegionsLoad().entrySet()) {
+<a name="571" href="#571">571</a>         <strong class="jxr_keyword">if</strong> (region.getValue().getNameAsString().equals(tableName)) {
+<a name="572" href="#572">572</a>           <em class="jxr_comment">// this server server hosts a region of tableName: add this server..</em>
+<a name="573" href="#573">573</a>           serverLoadHashMap.put(server.getKey(),server.getValue());
+<a name="574" href="#574">574</a>           <em class="jxr_comment">// .. and skip the rest of the regions that it hosts.</em>
+<a name="575" href="#575">575</a>           <strong class="jxr_keyword">break</strong>;
+<a name="576" href="#576">576</a>         }
+<a name="577" href="#577">577</a>       }
+<a name="578" href="#578">578</a>     }
+<a name="579" href="#579">579</a>     <strong class="jxr_keyword">return</strong> serverLoadHashMap;
+<a name="580" href="#580">580</a>   }
+<a name="581" href="#581">581</a> 
+<a name="582" href="#582">582</a>   <strong class="jxr_keyword">void</strong> assertAllRegionServers(String[] expectedCoprocessors, String tableName)
+<a name="583" href="#583">583</a>       <strong class="jxr_keyword">throws</strong> InterruptedException {
+<a name="584" href="#584">584</a>     Map&lt;ServerName, HServerLoad&gt; servers;
+<a name="585" href="#585">585</a>     String[] actualCoprocessors = <strong class="jxr_keyword">null</strong>;
+<a name="586" href="#586">586</a>     <strong class="jxr_keyword">boolean</strong> success = false;
+<a name="587" href="#587">587</a>     <strong class="jxr_keyword">for</strong>(<strong class="jxr_keyword">int</strong> i = 0; i &lt; 5; i++) {
+<a name="588" href="#588">588</a>       <strong class="jxr_keyword">if</strong> (tableName == <strong class="jxr_keyword">null</strong>) {
+<a name="589" href="#589">589</a>         <em class="jxr_comment">//if no tableName specified, use all servers.</em>
+<a name="590" href="#590">590</a>         servers =
+<a name="591" href="#591">591</a>             TEST_UTIL.getMiniHBaseCluster().getMaster().getServerManager().
+<a name="592" href="#592">592</a>                 getOnlineServers();
+<a name="593" href="#593">593</a>       } <strong class="jxr_keyword">else</strong> {
+<a name="594" href="#594">594</a>         servers = serversForTable(tableName);
+<a name="595" href="#595">595</a>       }
+<a name="596" href="#596">596</a>       <strong class="jxr_keyword">boolean</strong> any_failed = false;
+<a name="597" href="#597">597</a>       <strong class="jxr_keyword">for</strong>(Map.Entry&lt;ServerName,HServerLoad&gt; server: servers.entrySet()) {
+<a name="598" href="#598">598</a>         actualCoprocessors = server.getValue().getRsCoprocessors();
+<a name="599" href="#599">599</a>         <strong class="jxr_keyword">if</strong> (!Arrays.equals(actualCoprocessors, expectedCoprocessors)) {
+<a name="600" href="#600">600</a>           LOG.debug(<span class="jxr_string">"failed comparison: actual: "</span> +
+<a name="601" href="#601">601</a>               Arrays.toString(actualCoprocessors) +
+<a name="602" href="#602">602</a>               <span class="jxr_string">" ; expected: "</span> + Arrays.toString(expectedCoprocessors));
+<a name="603" href="#603">603</a>           any_failed = <strong class="jxr_keyword">true</strong>;
+<a name="604" href="#604">604</a>           <strong class="jxr_keyword">break</strong>;
+<a name="605" href="#605">605</a>         }
+<a name="606" href="#606">606</a>       }
+<a name="607" href="#607">607</a>       <strong class="jxr_keyword">if</strong> (any_failed == false) {
+<a name="608" href="#608">608</a>         success = <strong class="jxr_keyword">true</strong>;
+<a name="609" href="#609">609</a>         <strong class="jxr_keyword">break</strong>;
+<a name="610" href="#610">610</a>       }
+<a name="611" href="#611">611</a>       LOG.debug(<span class="jxr_string">"retrying after failed comparison: "</span> + i);
+<a name="612" href="#612">612</a>       Thread.sleep(1000);
+<a name="613" href="#613">613</a>     }
+<a name="614" href="#614">614</a>     assertTrue(success);
+<a name="615" href="#615">615</a>   }
+<a name="616" href="#616">616</a> 
+<a name="617" href="#617">617</a>   @Test
+<a name="618" href="#618">618</a>   <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testMasterCoprocessorsReported() {
+<a name="619" href="#619">619</a>     <em class="jxr_comment">// HBASE 4070: Improve region server metrics to report loaded coprocessors</em>
+<a name="620" href="#620">620</a>     <em class="jxr_comment">// to master: verify that the master is reporting the correct set of</em>
+<a name="621" href="#621">621</a>     <em class="jxr_comment">// loaded coprocessors.</em>
+<a name="622" href="#622">622</a>     <strong class="jxr_keyword">final</strong> String loadedMasterCoprocessorsVerify =
+<a name="623" href="#623">623</a>         <span class="jxr_string">"["</span> + masterCoprocessor.getSimpleName() + <span class="jxr_string">"]"</span>;
+<a name="624" href="#624">624</a>     String loadedMasterCoprocessors =
+<a name="625" href="#625">625</a>         java.util.Arrays.toString(
+<a name="626" href="#626">626</a>             TEST_UTIL.getHBaseCluster().getMaster().getCoprocessors());
+<a name="627" href="#627">627</a>     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
+<a name="628" href="#628">628</a>   }
+<a name="629" href="#629">629</a> 
+<a name="630" href="#630">630</a>   <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> waitForTable(byte[] name) <strong class="jxr_keyword">throws</strong> InterruptedException, IOException {
+<a name="631" href="#631">631</a>     <em class="jxr_comment">// First wait until all regions are online</em>
+<a name="632" href="#632">632</a>     TEST_UTIL.waitTableEnabled(name, 5000);
+<a name="633" href="#633">633</a>     <em class="jxr_comment">// Now wait a bit longer for the coprocessor hosts to load the CPs</em>
+<a name="634" href="#634">634</a>     Thread.sleep(1000);
+<a name="635" href="#635">635</a>   }
+<a name="636" href="#636">636</a> 
+<a name="637" href="#637">637</a>   @org.junit.Rule
+<a name="638" href="#638">638</a>   <strong class="jxr_keyword">public</strong> org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+<a name="639" href="#639">639</a>     <strong class="jxr_keyword">new</strong> org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
+<a name="640" href="#640">640</a> }
+<a name="641" href="#641">641</a> 
+</pre>
+<hr/><div id="footer">This page was automatically generated by <a href="http://maven.apache.org/">Maven</a></div></body>
+</html>
+

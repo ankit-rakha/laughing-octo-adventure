@@ -1,0 +1,6 @@
+com.thinkaurelius.titan
+com.thinkaurelius.titan.blueprints
+com.thinkaurelius.titan.core
+com.thinkaurelius.titan.core.attribute
+com.thinkaurelius.titan.example
+com.thinkaurelius.titan.testutil

@@ -1,0 +1,84 @@
+2013-04-15 16:29:06,531 INFO org.apache.hadoop.mapred.TaskTracker: STARTUP_MSG: 
+/************************************************************
+STARTUP_MSG: Starting TaskTracker
+STARTUP_MSG:   host = isofaults-MacBook-Pro.local/192.168.1.135
+STARTUP_MSG:   args = []
+STARTUP_MSG:   version = 1.0.4
+STARTUP_MSG:   build = https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1.0 -r 1393290; compiled by 'hortonfo' on Wed Oct  3 05:13:58 UTC 2012
+************************************************************/
+2013-04-15 16:29:06,750 INFO org.apache.hadoop.metrics2.impl.MetricsConfig: loaded properties from hadoop-metrics2.properties
+2013-04-15 16:29:06,818 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source MetricsSystem,sub=Stats registered.
+2013-04-15 16:29:06,819 INFO org.apache.hadoop.metrics2.impl.MetricsSystemImpl: Scheduled snapshot period at 10 second(s).
+2013-04-15 16:29:06,819 INFO org.apache.hadoop.metrics2.impl.MetricsSystemImpl: TaskTracker metrics system started
+2013-04-15 16:29:07,198 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source ugi registered.
+2013-04-15 16:29:07,202 WARN org.apache.hadoop.metrics2.impl.MetricsSystemImpl: Source name ugi already exists!
+2013-04-15 16:29:07,448 INFO org.mortbay.log: Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2013-04-15 16:29:07,506 INFO org.apache.hadoop.http.HttpServer: Added global filtersafety (class=org.apache.hadoop.http.HttpServer$QuotingInputFilter)
+2013-04-15 16:29:07,533 INFO org.apache.hadoop.mapred.TaskLogsTruncater: Initializing logs' truncater with mapRetainSize=-1 and reduceRetainSize=-1
+2013-04-15 16:29:07,561 INFO org.apache.hadoop.mapred.TaskTracker: Starting tasktracker with owner as isofault
+2013-04-15 16:29:07,563 INFO org.apache.hadoop.mapred.TaskTracker: Good mapred local directories are: /tmp/hadoop-isofault/mapred/local
+2013-04-15 16:29:07,568 WARN org.apache.hadoop.util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2013-04-15 16:29:07,580 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source jvm registered.
+2013-04-15 16:29:07,581 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source TaskTrackerMetrics registered.
+2013-04-15 16:29:07,616 INFO org.apache.hadoop.ipc.Server: Starting SocketReader
+2013-04-15 16:29:07,618 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source RpcDetailedActivityForPort49447 registered.
+2013-04-15 16:29:07,618 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source RpcActivityForPort49447 registered.
+2013-04-15 16:29:07,620 INFO org.apache.hadoop.ipc.Server: IPC Server Responder: starting
+2013-04-15 16:29:07,620 INFO org.apache.hadoop.ipc.Server: IPC Server listener on 49447: starting
+2013-04-15 16:29:07,621 INFO org.apache.hadoop.ipc.Server: IPC Server handler 0 on 49447: starting
+2013-04-15 16:29:07,621 INFO org.apache.hadoop.ipc.Server: IPC Server handler 1 on 49447: starting
+2013-04-15 16:29:07,621 INFO org.apache.hadoop.ipc.Server: IPC Server handler 2 on 49447: starting
+2013-04-15 16:29:07,621 INFO org.apache.hadoop.ipc.Server: IPC Server handler 3 on 49447: starting
+2013-04-15 16:29:07,622 INFO org.apache.hadoop.mapred.TaskTracker: TaskTracker up at: localhost/127.0.0.1:49447
+2013-04-15 16:29:07,622 INFO org.apache.hadoop.mapred.TaskTracker: Starting tracker tracker_192.168.1.135:localhost/127.0.0.1:49447
+2013-04-15 16:29:43,980 INFO org.apache.hadoop.mapred.TaskTracker: SHUTDOWN_MSG: 
+/************************************************************
+SHUTDOWN_MSG: Shutting down TaskTracker at isofaults-MacBook-Pro.local/192.168.1.135
+************************************************************/
+2013-04-15 16:31:53,804 INFO org.apache.hadoop.mapred.TaskTracker: STARTUP_MSG: 
+/************************************************************
+STARTUP_MSG: Starting TaskTracker
+STARTUP_MSG:   host = isofaults-MacBook-Pro.local/192.168.1.135
+STARTUP_MSG:   args = []
+STARTUP_MSG:   version = 1.0.4
+STARTUP_MSG:   build = https://svn.apache.org/repos/asf/hadoop/common/branches/branch-1.0 -r 1393290; compiled by 'hortonfo' on Wed Oct  3 05:13:58 UTC 2012
+************************************************************/
+2013-04-15 16:31:54,667 INFO org.apache.hadoop.metrics2.impl.MetricsConfig: loaded properties from hadoop-metrics2.properties
+2013-04-15 16:31:55,165 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source MetricsSystem,sub=Stats registered.
+2013-04-15 16:31:55,167 INFO org.apache.hadoop.metrics2.impl.MetricsSystemImpl: Scheduled snapshot period at 10 second(s).
+2013-04-15 16:31:55,167 INFO org.apache.hadoop.metrics2.impl.MetricsSystemImpl: TaskTracker metrics system started
+2013-04-15 16:31:56,598 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source ugi registered.
+2013-04-15 16:31:56,605 WARN org.apache.hadoop.metrics2.impl.MetricsSystemImpl: Source name ugi already exists!
+2013-04-15 16:31:57,037 INFO org.mortbay.log: Logging to org.slf4j.impl.Log4jLoggerAdapter(org.mortbay.log) via org.mortbay.log.Slf4jLog
+2013-04-15 16:31:57,173 INFO org.apache.hadoop.http.HttpServer: Added global filtersafety (class=org.apache.hadoop.http.HttpServer$QuotingInputFilter)
+2013-04-15 16:31:57,254 INFO org.apache.hadoop.mapred.TaskLogsTruncater: Initializing logs' truncater with mapRetainSize=-1 and reduceRetainSize=-1
+2013-04-15 16:31:57,277 INFO org.apache.hadoop.mapred.TaskTracker: Starting tasktracker with owner as isofault
+2013-04-15 16:31:57,279 INFO org.apache.hadoop.mapred.TaskTracker: Good mapred local directories are: /tmp/hadoop-isofault/mapred/local
+2013-04-15 16:31:57,284 WARN org.apache.hadoop.util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2013-04-15 16:31:57,298 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source jvm registered.
+2013-04-15 16:31:57,299 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source TaskTrackerMetrics registered.
+2013-04-15 16:31:57,343 INFO org.apache.hadoop.ipc.Server: Starting SocketReader
+2013-04-15 16:31:57,347 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source RpcDetailedActivityForPort49184 registered.
+2013-04-15 16:31:57,347 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source RpcActivityForPort49184 registered.
+2013-04-15 16:31:57,362 INFO org.apache.hadoop.ipc.Server: IPC Server Responder: starting
+2013-04-15 16:31:57,363 INFO org.apache.hadoop.ipc.Server: IPC Server listener on 49184: starting
+2013-04-15 16:31:57,382 INFO org.apache.hadoop.ipc.Server: IPC Server handler 0 on 49184: starting
+2013-04-15 16:31:57,385 INFO org.apache.hadoop.ipc.Server: IPC Server handler 1 on 49184: starting
+2013-04-15 16:31:57,386 INFO org.apache.hadoop.ipc.Server: IPC Server handler 2 on 49184: starting
+2013-04-15 16:31:57,388 INFO org.apache.hadoop.ipc.Server: IPC Server handler 3 on 49184: starting
+2013-04-15 16:31:57,388 INFO org.apache.hadoop.mapred.TaskTracker: TaskTracker up at: localhost/127.0.0.1:49184
+2013-04-15 16:31:57,388 INFO org.apache.hadoop.mapred.TaskTracker: Starting tracker tracker_192.168.1.135:localhost/127.0.0.1:49184
+2013-04-15 16:48:50,604 INFO org.apache.hadoop.mapred.TaskTracker: Starting thread: Map-events fetcher for all reduce tasks on tracker_192.168.1.135:localhost/127.0.0.1:49184
+2013-04-15 16:48:50,605 INFO org.apache.hadoop.mapred.TaskTracker:  Using ResourceCalculatorPlugin : null
+2013-04-15 16:48:50,629 WARN org.apache.hadoop.util.ProcessTree: setsid is not available on this machine. So not using it.
+2013-04-15 16:48:50,629 INFO org.apache.hadoop.util.ProcessTree: setsid exited with exit code 0
+2013-04-15 16:48:50,680 INFO org.apache.hadoop.util.ProcfsBasedProcessTree: ProcfsBasedProcessTree currently is supported only on Linux.
+2013-04-15 16:48:50,680 INFO org.apache.hadoop.mapred.TaskTracker: ProcessTree implementation is missing on this system. TaskMemoryManager is disabled.
+2013-04-15 16:48:50,695 INFO org.apache.hadoop.mapred.IndexCache: IndexCache created with max memory = 10485760
+2013-04-15 16:48:50,713 INFO org.apache.hadoop.metrics2.impl.MetricsSourceAdapter: MBean for source ShuffleServerMetrics registered.
+2013-04-15 16:48:50,717 INFO org.apache.hadoop.http.HttpServer: Port returned by webServer.getConnectors()[0].getLocalPort() before open() is -1. Opening the listener on 50060
+2013-04-15 16:48:50,718 INFO org.apache.hadoop.http.HttpServer: listener.getLocalPort() returned 50060 webServer.getConnectors()[0].getLocalPort() returned 50060
+2013-04-15 16:48:50,718 INFO org.apache.hadoop.http.HttpServer: Jetty bound to port 50060
+2013-04-15 16:48:50,718 INFO org.mortbay.log: jetty-6.1.26
+2013-04-15 16:48:51,183 INFO org.mortbay.log: Started SelectChannelConnector@0.0.0.0:50060
+2013-04-15 16:48:51,183 INFO org.apache.hadoop.mapred.TaskTracker: FILE_CACHE_SIZE for mapOutputServlet set to : 2000

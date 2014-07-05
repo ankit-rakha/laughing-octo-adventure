@@ -1,4 +1,4 @@
 laughing-octo-adventure
 =======================
 
-groovy data loader for titan graph database
+:speech_balloon: groovy data loader for titan graph database
